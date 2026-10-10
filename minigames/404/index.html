@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>* (It's a old woman)</title>
+    <link rel="icon" type="image/png" href="/icon.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            height: 100vh;
+            background: #000; /* 纯黑背景 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* 负责上下起伏的容器 */
+        #float-wrapper {
+            display: inline-block;
+        }
+
+        #float-wrapper.active {
+            animation: floatUpDown 3s ease-in-out infinite;
+        }
+
+        /* 负责3D旋转的容器 */
+        #rotate-wrapper {
+            display: inline-block;
+        }
+
+        #rotate-wrapper.active {
+            /* 线性匀速，保证旋转中间没有任何停歇 */
+            animation: rotate3D 4s linear infinite;
+        }
+
+        #target-img {
+            width: 280px;
+            height: 280px;
+            cursor: pointer;
+            display: block;
+        }
+
+        /* 上下起伏动画 */
+        @keyframes floatUpDown {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-50px);
+            }
+        }
+
+        /* 3D旋转动画（带透视） */
+        @keyframes rotate3D {
+            0% {
+                transform: perspective(800px) rotateX(20deg) rotateY(0deg);
+            }
+            100% {
+                transform: perspective(800px) rotateX(20deg) rotateY(360deg);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 双层嵌套：外层起伏，内层3D旋转 -->
+    <div id="float-wrapper">
+        <div id="rotate-wrapper">
+            <img id="target-img" src="gunmu.png" alt="██">
+        </div>
+    </div>
+
+    <!-- 临时 OGG 音乐 -->
+    <audio id="bgm" src="gaster.ogg" loop preload="auto"></audio>
+
+    <script>
+        const img = document.getElementById('target-img');
+        const floatWrapper = document.getElementById('float-wrapper');
+        const rotateWrapper = document.getElementById('rotate-wrapper');
+        const audio = document.getElementById('bgm');
+        let isActive = false;
+
+        img.addEventListener('click', () => {
+            if (!isActive) {
+                // 启动起伏和3D旋转
+                floatWrapper.classList.add('active');
+                rotateWrapper.classList.add('active');
+                // 播放音乐
+                audio.play().catch(err => {
+                    console.warn('音乐播放失败，请检查 temp.ogg 是否存在或使用 localhost 打开', err);
+                });
+                isActive = true;
+            } else {
+                // 停止起伏和旋转（图片瞬间回正）
+                floatWrapper.classList.remove('active');
+                rotateWrapper.classList.remove('active');
+                // 停止并重置音乐
+                audio.pause();
+                audio.currentTime = 0;
+                isActive = false;
+            }
+        });
+    </script>
+</body>
+</html>

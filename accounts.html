@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>江林颜官号</title>
+    <link rel="icon" type="image/png" href="/icon.png">
+    <link href="https://fonts.loli.net/css2?family=Noto+Serif+SC:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: #050505;
+            color: #ffffff;
+            font-family: 'Noto Serif SC', 'Playfair Display', serif;
+            overflow-x: hidden;
+            width: 100vw;
+        }
+
+        #canvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 1;
+        }
+
+        .navbar {
+            position: fixed;
+            top: 0; width: 100%;
+            padding: 40px 60px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+            animation: fadeDown 2s ease 1s both;
+        }
+
+        .logo-mini {
+            font-size: 1.2rem;
+            letter-spacing: 4px;
+            color: #d4af37;
+            font-weight: 700;
+        }
+
+        .nav-links a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            margin-left: 40px;
+            font-size: 0.85rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            transition: all 0.4s ease;
+            position: relative;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px; left: 0;
+            width: 0%; height: 1px;
+            background: #d4af37;
+            transition: width 0.4s ease;
+        }
+
+        .nav-links a:hover { color: #d4af37; }
+        .nav-links a:hover::after { width: 100%; }
+
+        .hero {
+            position: relative;
+            z-index: 5;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            min-height: 100vh;
+            padding-top: 12vh;
+            padding-bottom: 60px;
+            pointer-events: none;
+            text-align: center;
+        }
+
+        .subtitle, .title, .divider, .hero-img, .desc, .nav-grid {
+            pointer-events: auto;
+        }
+
+        .subtitle {
+            font-family: 'Playfair Display', serif;
+            font-style: italic;
+            font-size: 1rem;
+            letter-spacing: 8px;
+            color: rgba(212, 175, 55, 0.8);
+            margin-bottom: 20px;
+            animation: fadeIn 2s ease 0.5s both;
+        }
+
+        .title {
+            font-size: clamp(3rem, 8vw, 7rem);
+            font-weight: 700;
+            letter-spacing: 20px;
+            background: linear-gradient(135deg, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 10px 60px rgba(212, 175, 55, 0.15);
+            animation: titleReveal 3s cubic-bezier(0.23, 1, 0.32, 1) 0.8s both;
+        }
+
+        .divider {
+            width: 1px; height: 60px;
+            background: linear-gradient(to bottom, transparent, #d4af37, transparent);
+            margin: 30px 0 10px 0;
+            animation: growDivider 2s ease 1.5s both;
+        }
+
+        /* 临时艺术图片 */
+        .hero-img {
+            margin-top: 20px;
+            width: 220px;
+            border-radius: 6px;
+            border: 1px solid rgba(212, 175, 55, 0.25);
+            box-shadow: 0 20px 60px rgba(212, 175, 55, 0.12), 0 0 30px rgba(212, 175, 55, 0.05) inset;
+            opacity: 0;
+            cursor: pointer;
+            animation: fadeInUp 2s cubic-bezier(0.23, 1, 0.32, 1) 1.4s both;
+            transition: transform 0.4s ease, box-shadow 0.4s ease;
+        }
+
+        .hero-img:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 30px 80px rgba(212, 175, 55, 0.3), 0 0 40px rgba(212, 175, 55, 0.1) inset;
+        }
+
+        @keyframes pulseImg {
+            0% { transform: scale(1); box-shadow: 0 20px 60px rgba(212, 175, 55, 0.12); }
+            50% { transform: scale(1.05); box-shadow: 0 0 100px rgba(212, 175, 55, 0.7), 0 0 40px rgba(255,255,255,0.4) inset; }
+            100% { transform: scale(1); box-shadow: 0 20px 60px rgba(212, 175, 55, 0.12); }
+        }
+        .pulse-anim {
+            animation: pulseImg 0.6s ease !important;
+        }
+
+        /* 网站导航网格 */
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 24px;
+            width: 80%;
+            max-width: 1000px;
+            margin-top: 40px;
+            opacity: 0;
+            animation: fadeInUp 2s cubic-bezier(0.23, 1, 0.32, 1) 1.8s both;
+        }
+
+        .nav-card {
+            background: rgba(10, 10, 10, 0.7);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            border-radius: 8px;
+            padding: 28px 20px;
+            text-decoration: none;
+            transition: all 0.4s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(5px);
+        }
+
+        .nav-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 2px;
+            background: linear-gradient(90deg, transparent, #d4af37, transparent);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .nav-card:hover {
+            border-color: rgba(212, 175, 55, 0.6);
+            transform: translateY(-8px);
+            box-shadow: 0 15px 35px rgba(212, 175, 55, 0.2);
+            background: rgba(25, 25, 25, 0.85);
+        }
+
+        .nav-card:hover::before {
+            opacity: 1;
+        }
+
+        .nav-icon {
+            font-size: 2.2rem;
+            margin-bottom: 14px;
+            filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.4));
+        }
+
+        .nav-card h3 {
+            font-size: 1.15rem;
+            color: #d4af37;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+            font-weight: 700;
+        }
+
+        .nav-card p {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.5);
+            letter-spacing: 1px;
+            line-height: 1.6;
+        }
+
+        .desc {
+            font-size: 0.9rem;
+            letter-spacing: 6px;
+            color: rgba(255, 255, 255, 0.5);
+            line-height: 2;
+            margin-top: 50px;
+            margin-bottom: 20px;
+            animation: fadeIn 2s ease 2.2s both;
+        }
+
+        .hint {
+            position: fixed;
+            bottom: 40px; left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            font-size: 0.75rem;
+            letter-spacing: 4px;
+            color: rgba(255, 255, 255, 0.3);
+            animation: pulse 2s infinite 3s;
+            pointer-events: none;
+        }
+
+        /* 性能调节面板 */
+        .control-panel {
+            position: fixed;
+            bottom: 30px;
+            right: 40px;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            opacity: 0.25;
+            transition: opacity 0.4s ease;
+        }
+
+        .control-panel:hover { opacity: 1; }
+
+        .control-panel label {
+            font-size: 0.65rem;
+            letter-spacing: 2px;
+            color: #d4af37;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .control-panel input[type="range"] {
+            -webkit-appearance: none;
+            width: 130px;
+            background: transparent;
+        }
+
+        .control-panel input[type="range"]::-webkit-slider-runnable-track {
+            height: 1px;
+            background: rgba(212, 175, 55, 0.4);
+        }
+
+        .control-panel input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 12px;
+            width: 12px;
+            border-radius: 50%;
+            background: #d4af37;
+            margin-top: -5.5px;
+            box-shadow: 0 0 8px rgba(212, 175, 55, 0.8);
+            cursor: pointer;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes titleReveal {
+            from { opacity: 0; transform: scale(0.9) translateY(40px); filter: blur(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+        }
+        @keyframes growDivider { from { height: 0; opacity: 0; } to { height: 60px; opacity: 1; } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.8; } }
+    
+        top-banner {
+            box-sizing: border-box;
+            width: 100%;
+            min-height: 44px;
+            padding: 10px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 8px 14px;
+
+            background: #111827;
+            color: #f9fafb;
+            font: 14px/1.5 system-ui, sans-serif;
+            text-align: center;
+            border-bottom: 1px solid #374151;
+        }
+
+        .top-banner a {
+            color: #93c5fd;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .top-banner a:hover {
+            color: #ffffff;
+            text-decoration: underline;
+        }
+
+        @media (max-width: 480px) {
+            .top-banner {
+            padding: 10px 12px;
+            gap: 5px 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="canvas"></canvas>
+
+    <nav class="navbar">
+        <div class="logo-mini">江林颜</div>
+        <div class="nav-links">
+            <a href="https://江林颜.gay/minigames">马跃小游戏</a>
+            <a href="https://江林颜.gay/accounts">账号导航</a>
+            <a href="https://江林颜.gay">首页</a>
+        </div>
+    </nav>
+
+   <!-- Top Announcement Banner -->
+    <div class="top-banner">
+        <span>⚠️</span>
+            <span>此网站已永久停止更新，此域名(江林颜.gay)也将不会再续费</span>
+         <a href="https://github.com/usernotfound999/horsyhtml/">[新]在 Github 上查看项目仓库</a>
+
+    <main class="hero">
+        <div class="subtitle">Accounts</div>
+        <h1 class="title">账号导航</h1>
+        <div class="divider"></div>
+        
+        <!-- 纯内联SVG艺术图 
+        <img class="hero-img" id="heroImg" src="data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 350'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%230a0a0a'/%3E%3Cstop offset='100%25' stop-color='%231a1813'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect fill='url(%23g)' width='600' height='350'/%3E%3Cpath d='M0,175 C150,50 450,300 600,175' fill='none' stroke='%23d4af37' stroke-width='2' opacity='0.5'/%3E%3Cpath d='M0,200 C200,100 400,280 600,150' fill='none' stroke='%23bf953f' stroke-width='1' opacity='0.3'/%3E%3Ccircle cx='300' cy='175' r='100' fill='none' stroke='%23fcf6ba' stroke-width='0.5' opacity='0.2'/%3E%3Ccircle cx='300' cy='175' r='140' fill='none' stroke='%23d4af37' stroke-width='0.5' opacity='0.15'/%3E%3Ccircle cx='300' cy='175' r='60' fill='none' stroke='%23aa771c' stroke-width='1' opacity='0.4'/%3E%3C/svg%3E" alt="Art">
+        
+        <!-- 网站导航网格 -->
+        <div class="nav-grid">
+            <a href="https://space.bilibili.com/516464444" class="nav-card" target="_blank">
+                <div class="nav-icon">📺</div>
+                <h3>杰弗里爱泼斯坦Official</h3>
+                <p>网站站长的B站账号，关注爱泼斯坦谢谢喵</p>
+            </a>
+        <div class="nav-grid">
+            <a href="https://www.douyin.com/user/MS4wLjABAAAACW-JHwZW6NavdUnfehKd0VoRVvlAljTdwEQQSKuOZCE" class="nav-card" target="_blank">
+                <div class="nav-icon">①</div>
+                <h3>江林颜</h3>
+                <p>江林颜的大号</p>
+            </a>
+            <a href="https://www.douyin.com/user/MS4wLjABAAAAV_7cblvxIjnNTJTvGxwn4Eqz_O48-xHnYNGGZk1LgCM" class="nav-card" target="_blank">
+                <div class="nav-icon">②</div>
+                <h3>江林颜2.0</h3>
+                <p>江林颜的第三个号</p>
+            </a>
+             <a href="https://www.douyin.com/user/MS4wLjABAAAAiAQq1I6F-w7RFp_4wG2B11qShUVi6u9oxbfpgpaGvLY" class="nav-card" target="_blank">
+                <div class="nav-icon">🕌</div>
+                <h3>江林颜道观版</h3>
+                <p>江林颜第二个号，曾用名病娇江林颜</p>
+            </a>
+          <a href="https://www.douyin.com/user/MS4wLjABAAAABNllK7kIp14YhGxHhEgFD-FddJx8RCrqmKmqu2yAyK8" class="nav-card" target="_blank">
+                <div class="nav-icon">④</div>
+                <h3>江林颜4.0</h3>
+                <p>江林颜第四个号</p>
+            </a>
+          <a href="https://www.douyin.com/user/MS4wLjABAAAA5njP2eSpxgFtttZ56NlHBpMROGRIF9DRY3wNdaegvGtwqRgUREXIMkk8qWo4I8Kq?previous_page=app_code_link" class="nav-card" target="_blank">
+                <div class="nav-icon">④</div>
+                <h3>江林颜5.0</h3>
+                <p>江林颜第五个号</p>
+            </a>
+        </div>
+
+        <p class="desc">极 致 奢 华 · 导 航 体 验<br>LUXURY NAVIGATION</p>
+    </main>
+
+    <div class="hint">— 点击背景体验爆炸特效 · 点击卡片开启梦幻旅程 —</div>
+
+    <div class="control-panel">
+        <label>粒子密度 <span id="particleVal">50%</span></label>
+        <input type="range" id="particleSlider" min="10" max="300" value="50">
+    </div>
+
+    <script>
+        // ==================== 性能与密度控制 ====================
+        let particleScale = 0.5;
+        document.getElementById('particleSlider').addEventListener('input', function() {
+            particleScale = this.value / 100;
+            document.getElementById('particleVal').textContent = this.value + '%';
+        });
+
+        // ==================== Web Audio 引擎 ====================
+        let audioCtx = null;
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        // 爆炸音效
+        function playExplosionSound() {
+            if (!audioCtx) return;
+            const t = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(150, t);
+            osc.frequency.exponentialRampToValueAtTime(20, t + 0.6);
+            gain.gain.setValueAtTime(0.5, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.6);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(t); osc.stop(t + 0.6);
+
+            const bufferSize = audioCtx.sampleRate * 0.5;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+            const noiseFilter = audioCtx.createBiquadFilter();
+            noiseFilter.type = 'bandpass';
+            noiseFilter.frequency.value = 800;
+            const noiseGain = audioCtx.createGain();
+            noiseGain.gain.setValueAtTime(0.4, t);
+            noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+            noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(audioCtx.destination);
+            noise.start(t);
+        }
+
+        // 奢侈品级水晶和弦（点击图片或卡片播放）
+        function playLuxuryChime() {
+            if (!audioCtx) return;
+            const t = audioCtx.currentTime;
+            const frequencies = [523.25, 659.25, 783.99, 987.77, 1174.66, 1567.98];
+            
+            frequencies.forEach((freq, index) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = freq + (Math.random() * 2 - 1); 
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                gain.gain.setValueAtTime(0, t);
+                gain.gain.linearRampToValueAtTime(0.12, t + 0.02); 
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 3 + index * 0.4);
+                
+                osc.start(t);
+                osc.stop(t + 4);
+            });
+        }
+
+        // ==================== 高级粒子爆炸引擎 ====================
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height, particles = [], backgroundStars = [];
+        const palette = ['#d4af37', '#fff8dc', '#ffd700', '#c0c0c0', '#fffafa', '#b8860b'];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Particle {
+            constructor(x, y, options = {}) {
+                this.x = x; this.y = y;
+                const angle = Math.random() * Math.PI * 2;
+                const speed = (Math.random() * (options.speed || 25)) + 1;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                this.life = 1;
+                this.decay = Math.random() * 0.02 + (options.decay || 0.01);
+                this.size = Math.random() * (options.size || 3) + 0.5;
+                this.color = palette[Math.floor(Math.random() * palette.length)];
+                this.gravity = options.gravity !== undefined ? options.gravity : 0.12;
+                this.friction = options.friction || 0.98;
+                this.shine = options.noShadow ? false : (Math.random() > 0.92);
+            }
+            update() {
+                this.vx *= this.friction; this.vy *= this.friction;
+                this.vy += this.gravity;
+                this.x += this.vx; this.y += this.vy;
+                this.life -= this.decay;
+            }
+            draw(highPerfMode) {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.life);
+                ctx.fillStyle = this.color;
+                if (this.shine && !highPerfMode) {
+                    ctx.shadowBlur = 12;
+                    ctx.shadowColor = this.color;
+                }
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        function explode(x, y, count = 120, opts = {}) {
+            let actualCount = Math.floor(count * particleScale);
+            for (let i = 0; i < actualCount; i++) particles.push(new Particle(x, y, opts));
+            if (particles.length > 1500) particles.splice(0, particles.length - 1500);
+            playExplosionSound();
+        }
+
+        function initBackground() {
+            for (let i = 0; i < 80; i++) {
+                backgroundStars.push({
+                    x: Math.random() * width, y: Math.random() * height,
+                    size: Math.random() * 1.5,
+                    speedY: -(Math.random() * 0.5 + 0.1),
+                    alpha: Math.random() * 0.5
+                });
+            }
+        }
+        initBackground();
+
+        function animate() {
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = 'rgba(5, 5, 5, 0.25)';
+            ctx.fillRect(0, 0, width, height);
+            ctx.globalCompositeOperation = 'lighter';
+
+            backgroundStars.forEach(star => {
+                star.y += star.speedY;
+                if (star.y < 0) star.y = height;
+                ctx.save();
+                ctx.globalAlpha = star.alpha * (0.5 + 0.5 * Math.sin(Date.now() * 0.001 + star.x));
+                ctx.fillStyle = '#d4af37';
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            const highPerfMode = particles.length > 600;
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.update(); p.draw(highPerfMode);
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        // 开场盛大爆炸
+        setTimeout(() => {
+            for(let i=0; i<5; i++){
+                setTimeout(()=>{
+                    explode(width/2 + (Math.random()-0.5)*200, height/2 + (Math.random()-0.5)*200, 150, { speed: 25, size: 3, decay: 0.01, gravity: 0.08 });
+                }, i*200);
+            }
+        }, 800);
+
+        // 点击背景触发爆炸声
+        window.addEventListener('click', (e) => {
+            initAudio();
+            if (e.target.id !== 'heroImg' && !e.target.closest('.nav-card')) {
+                explode(e.clientX, e.clientY, 220, { speed: 30, size: 3.5, gravity: 0.15 });
+            }
+        });
+
+        // 点击图片：播放奢侈品和弦 + 图片脉冲动效
+        const heroImg = document.getElementById('heroImg');
+        heroImg.addEventListener('click', () => {
+            initAudio();
+            playLuxuryChime();
+            heroImg.classList.remove('pulse-anim');
+            void heroImg.offsetWidth;
+            heroImg.classList.add('pulse-anim');
+        });
+
+        // 点击导航卡片：播放和弦 + 粒子爆发 + 打开链接
+        document.querySelectorAll('.nav-card').forEach(card => {
+            card.addEventListener('click', function(e) {
+                e.preventDefault();
+                initAudio();
+                playLuxuryChime();
+                
+                // 在卡片中心产生小型粒子爆炸
+                const rect = this.getBoundingClientRect();
+                const x = rect.left + rect.width / 2;
+                const y = rect.top + rect.height / 2;
+                explode(x, y, 80, { speed: 15, size: 2.5, gravity: 0.05, decay: 0.015 });
+                
+                // 延迟跳转，让用户欣赏特效
+                const url = this.href;
+                setTimeout(() => {
+                    window.open(url, '_blank');
+                }, 800);
+            });
+        });
+
+        // 鼠标移动火花
+        let mouseTimer = 0;
+        window.addEventListener('mousemove', (e) => {
+            mouseTimer++;
+            if (mouseTimer % 4 === 0) {
+                explode(e.clientX, e.clientY, 2, { speed: 5, size: 1.5, decay: 0.03, gravity: 0, noShadow: true });
+            }
+        });
+
+        window.addEventListener('touchstart', (e) => {
+            initAudio();
+            const touch = e.touches[0];
+            if (e.target.id !== 'heroImg' && !e.target.closest('.nav-card')) {
+                explode(touch.clientX, touch.clientY, 180, { speed: 25, size: 3 });
+            }
+        });
+    </script>
+</body>
+</html>

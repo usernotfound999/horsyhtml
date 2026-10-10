@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>点击马跃</title>
+    <link rel="icon" type="image/png" href="/icon.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            font-family: "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #74ebd5, #acb6e5);
+        }
+
+        /* 顶端计数器 */
+        #counter {
+            text-align: center;
+            font-size: 32px;
+            font-weight: bold;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            letter-spacing: 2px;
+        }
+
+        /* 音量控制条 */
+        #volume-control {
+            text-align: center;
+            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: #fff;
+        }
+
+        #volume-control input {
+            vertical-align: middle;
+            margin-left: 10px;
+        }
+
+        /* 图片居中容器 */
+        .container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 图片样式 */
+        #clickImage {
+            width: 250px;
+            cursor: pointer;
+            user-select: none;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        /* 抖动动画 */
+        @keyframes shake {
+            0%   { transform: translateX(0) rotate(0deg); }
+            15%  { transform: translateX(-15px) rotate(-10deg); }
+            30%  { transform: translateX(15px) rotate(10deg); }
+            45%  { transform: translateX(-10px) rotate(-7deg); }
+            60%  { transform: translateX(10px) rotate(7deg); }
+            75%  { transform: translateX(-5px) rotate(-3deg); }
+            100% { transform: translateX(0) rotate(0deg); }
+        }
+
+        .shake {
+            animation: shake 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 计数器 -->
+    <div id="counter">点击次数: 0</div>
+
+    <!-- 背景音乐音量控制 -->
+    <div id="volume-control">
+        <label for="volumeSlider">背景音乐音量:</label>
+        <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.5">
+    </div>
+
+    <!-- 图片区域 -->
+    <div class="container">
+        <img id="clickImage" src="horsy.png" alt="Horsy">
+    </div>
+
+    <!-- 基础音效元素（用于预加载 sound.ogg，不直接播放，用来克隆） -->
+    <audio id="clickAudio" src="whatareudoing.ogg" preload="auto"></audio>
+    <!-- 背景音乐（music.ogg），设置 loop 循环播放 -->
+    <audio id="bgm" src="music.ogg" loop preload="auto"></audio>
+
+    <script>
+        let count = 0;
+        const counterEl = document.getElementById('counter');
+        const imgEl = document.getElementById('clickImage');
+        const baseAudioEl = document.getElementById('clickAudio');
+
+        // ===== 背景音乐及音量控制逻辑 =====
+        const bgm = document.getElementById('bgm');
+        const volumeSlider = document.getElementById('volumeSlider');
+        bgm.volume = volumeSlider.value;
+
+        bgm.play().catch(() => {
+            console.log('浏览器限制了自动播放，将在首次点击页面后播放背景音乐');
+        });
+
+        volumeSlider.addEventListener('input', () => {
+            bgm.volume = volumeSlider.value;
+        });
+        // ===================================
+
+        imgEl.addEventListener('click', () => {
+            // 确保用户首次交互后，背景音乐能够顺利播放
+            if (bgm.paused) {
+                bgm.play().catch(err => console.log(err));
+            }
+
+            // 1. 计数器加一
+            count++;
+            counterEl.textContent = '点击次数: ' + count;
+
+            // 2. 【优化】叠加播放 OGG 音效：克隆节点实现多实例同时播放
+            const sfxInstance = baseAudioEl.cloneNode();
+            sfxInstance.play().catch(err => {
+                console.log('未找到 sound.ogg，使用备用提示音或请放入音效文件');
+            });
+
+            // 3. 触发抖动动画
+            imgEl.classList.add('shake');
+
+            // 4. 动画结束后移除类名，以便下次点击再次触发
+            imgEl.addEventListener('animationend', () => {
+                imgEl.classList.remove('shake');
+            }, { once: true });
+        });
+    </script>
+
+</body>
+</html>

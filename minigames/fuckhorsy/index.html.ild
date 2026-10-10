@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>打马跃</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #74ebd5, #acb6e5);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        h1 { color: #333; margin-bottom: 15px; }
+        .info-bar {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #444;
+            align-items: center;
+        }
+        #startBtn {
+            padding: 8px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 6px;
+            background-color: #ff6b6b;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #startBtn:hover { background-color: #ee5a5a; }
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 120px);
+            grid-gap: 20px;
+        }
+        .hole {
+            width: 120px;
+            height: 120px;
+            background: #654321;
+            border-radius: 50%;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 5px 10px rgba(0,0,0,0.5);
+            border: 4px solid #543210;
+        }
+        .mole {
+            position: absolute;
+            bottom: -100px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            transition: bottom 0.25s ease-in-out;
+            cursor: pointer;
+        }
+        .mole.active { bottom: 10px; }
+        .mole img {
+            width: 80px;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        /* 弹窗 */
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: white;
+            z-index: 10;
+        }
+        .overlay h2 { font-size: 40px; margin-bottom: 10px; }
+        .overlay p { font-size: 22px; margin-bottom: 10px; }
+        .overlay button {
+            margin-top: 15px;
+            padding: 10px 25px;
+            font-size: 18px;
+            border: none;
+            border-radius: 6px;
+            background: #4ecdc4;
+            color: white;
+            cursor: pointer;
+        }
+        .overlay button:hover { background: #3bb3aa; }
+    </style>
+</head>
+<body>
+
+    <h1>🔨 打马跃 🐴</h1>
+    <div class="info-bar">
+        <div>🏆 分数: <span id="score">0</span></div>
+        <button id="startBtn">开始游戏</button>
+    </div>
+
+    <div class="game-grid" id="grid"></div>
+
+    <!-- 音频 -->
+    <audio id="bgm" src="music.mp3" loop preload="auto"></audio>
+    <audio id="hitSound" src="whatareudoing.ogg" preload="auto"></audio>
+    <audio id="loliSound" src="aughhhh.ogg" preload="auto"></audio>
+
+    <!-- 结束弹窗 -->
+    <div class="overlay" id="overlay">
+        <h2 id="endTitle">游戏结束!</h2>
+        <p id="endMsg">你打到了爱泼斯坦的萝莉！</p>
+        <p>最终得分: <span id="finalScore">0</span></p>
+        <button onclick="closeOverlay()">再来一局</button>
+    </div>
+
+    <script>
+        const grid = document.getElementById('grid');
+        const scoreEl = document.getElementById('score');
+        const startBtn = document.getElementById('startBtn');
+        const hitSound = document.getElementById('hitSound');
+        const loliSound = document.getElementById('loliSound');
+        const bgm = document.getElementById('bgm');
+        const overlay = document.getElementById('overlay');
+        const finalScoreEl = document.getElementById('finalScore');
+        const endTitle = document.getElementById('endTitle');
+        const endMsg = document.getElementById('endMsg');
+
+        let score = 0;
+        let isPlaying = false;
+        let moleTimer = null;
+        let holes = [];
+        const LOLI_CHANCE = 0.1; // loli 出现的概率 10%
+        const SHOW_DURATION = 600; // 地鼠存在时间（毫秒），想改0.4秒就写 400
+
+        // 初始化洞
+        for (let i = 0; i < 9; i++) {
+            const hole = document.createElement('div');
+            hole.classList.add('hole');
+
+            const mole = document.createElement('div');
+            mole.classList.add('mole');
+            mole.innerHTML = '<img src="horsy.png" alt="mole">';
+
+            mole.addEventListener('click', whack);
+
+            hole.appendChild(mole);
+            grid.appendChild(hole);
+            holes.push(mole);
+        }
+
+        function randomHole() {
+            return holes[Math.floor(Math.random() * holes.length)];
+        }
+
+        function showMole() {
+            if (!isPlaying) return;
+
+            // 藏起所有地鼠
+            holes.forEach(m => m.classList.remove('active'));
+
+            // 随机选洞
+            const mole = randomHole();
+
+            // 随机决定类型
+            const isLoli = Math.random() < LOLI_CHANCE;
+            const img = mole.querySelector('img');
+            if (isLoli) {
+                img.src = 'loli.png';
+                mole.dataset.type = 'loli';
+            } else {
+                img.src = 'horsy.png';
+                mole.dataset.type = 'horsy';
+            }
+
+            // 冒头
+            mole.classList.add('active');
+
+            // 存在指定时间后缩回
+            setTimeout(() => {
+                mole.classList.remove('active');
+            }, SHOW_DURATION);
+
+            // 地鼠缩回后，稍作间隔再出下一个
+            moleTimer = setTimeout(showMole, SHOW_DURATION + 500);
+        }
+
+        function whack() {
+            if (!isPlaying) return;
+            if (!this.classList.contains('active')) return;
+
+            this.classList.remove('active');
+
+            if (this.dataset.type === 'loli') {
+                // 打到 loli：播放惨叫，游戏结束
+                loliSound.currentTime = 0;
+                loliSound.play().catch(() => {});
+                endGame('loli');
+            } else {
+                // 打到 horsy：加分播音效
+                score++;
+                scoreEl.textContent = score;
+                hitSound.currentTime = 0;
+                hitSound.play().catch(() => {});
+            }
+        }
+
+        function startGame() {
+            if (isPlaying) {
+                clearTimeout(moleTimer);
+            }
+            score = 0;
+            scoreEl.textContent = score;
+            isPlaying = true;
+            startBtn.textContent = '重新开始';
+            overlay.style.display = 'none';
+
+            // 播放背景音乐
+            bgm.currentTime = 0;
+            bgm.play().catch(err => console.log('需要用户交互后才能播放音频'));
+
+            showMole();
+        }
+
+        function endGame(reason) {
+            isPlaying = false;
+            clearTimeout(moleTimer);
+            startBtn.textContent = '开始游戏';
+            bgm.pause();
+            bgm.currentTime = 0;
+
+            // 藏起所有地鼠
+            holes.forEach(m => {
+                m.classList.remove('active');
+                m.querySelector('img').src = 'horsy.png';
+            });
+
+            if (reason === 'loli') {
+                endTitle.textContent = '💥 游戏结束!';
+                endMsg.textContent = '你打到了爱泼斯坦的萝莉!';
+            }
+            finalScoreEl.textContent = score;
+            overlay.style.display = 'flex';
+        }
+
+        function closeOverlay() {
+            overlay.style.display = 'none';
+        }
+
+        startBtn.addEventListener('click', startGame);
+    </script>
+</body>
+</html>

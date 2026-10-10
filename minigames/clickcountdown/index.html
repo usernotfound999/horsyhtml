@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>点击马跃</title>
+    <link rel="icon" type="image/png" href="/icon.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            font-family: "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #74ebd5, #acb6e5);
+        }
+
+        /* 顶端状态栏 */
+        #status-bar {
+            text-align: center;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            padding: 20px;
+        }
+
+        /* 倒计时 */
+        #timer {
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+        }
+
+        /* 计数器 */
+        #counter {
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        /* 音量控制条 */
+        #volume-control {
+            text-align: center;
+            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: #fff;
+        }
+
+        #volume-control input {
+            vertical-align: middle;
+            margin-left: 10px;
+        }
+
+        /* 图片居中容器 */
+        .container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 图片样式 */
+        #clickImage {
+            width: 250px;
+            cursor: pointer;
+            user-select: none;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        /* 抖动动画 */
+        @keyframes shake {
+            0%   { transform: translateX(0) rotate(0deg); }
+            15%  { transform: translateX(-15px) rotate(-10deg); }
+            30%  { transform: translateX(15px) rotate(10deg); }
+            45%  { transform: translateX(-10px) rotate(-7deg); }
+            60%  { transform: translateX(10px) rotate(7deg); }
+            75%  { transform: translateX(-5px) rotate(-3deg); }
+            100% { transform: translateX(0) rotate(0deg); }
+        }
+
+        .shake {
+            animation: shake 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 状态栏：倒计时 + 计数器 -->
+    <div id="status-bar">
+        <div id="timer">倒计时: 60s</div>
+        <div id="counter">点击次数: 0</div>
+    </div>
+
+    <!-- 背景音乐音量控制 -->
+    <div id="volume-control">
+        <label for="volumeSlider">背景音乐音量:</label>
+        <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.5">
+    </div>
+
+    <!-- 图片区域 -->
+    <div class="container">
+        <img id="clickImage" src="horsy.png" alt="Horsy">
+    </div>
+
+    <!-- 基础点击音效（用于克隆） -->
+    <audio id="clickAudio" src="whatareudoing.ogg" preload="auto"></audio>
+    <!-- 待机背景音乐 -->
+    <audio id="bgm" src="music.ogg" loop preload="auto"></audio>
+    <!-- 倒计时专用音乐 -->
+    <audio id="countdownMusic" src="countdownmusic.mp3" preload="auto" loop></audio>
+
+    <script>
+        let count = 0;
+        let gameState = 'idle'; // 'idle'（静止等待）, 'running'（游戏中）, 'cooldown'（冷却中）
+        let timerInterval = null;
+        const timerEl = document.getElementById('timer');
+        const counterEl = document.getElementById('counter');
+        const imgEl = document.getElementById('clickImage');
+        const baseAudioEl = document.getElementById('clickAudio');
+        const bgm = document.getElementById('bgm');
+        const countdownMusic = document.getElementById('countdownMusic');
+        const volumeSlider = document.getElementById('volumeSlider');
+
+        // 初始化音量
+        bgm.volume = volumeSlider.value;
+        countdownMusic.volume = volumeSlider.value;
+
+        // 页面加载时尝试自动播放待机音乐
+        bgm.play().catch(() => {
+            console.log('浏览器限制了自动播放，将在首次交互后播放音乐');
+        });
+
+        // 音量滑块同步控制两首音乐
+        volumeSlider.addEventListener('input', () => {
+            bgm.volume = volumeSlider.value;
+            countdownMusic.volume = volumeSlider.value;
+        });
+
+        imgEl.addEventListener('click', () => {
+            // 冷却中，点击完全无效
+            if (gameState === 'cooldown') {
+                return;
+            }
+
+            // 静止时点击：开始游戏、切换音乐、重置计分
+            if (gameState === 'idle') {
+                gameState = 'running';
+                count = 0;
+                counterEl.textContent = '点击次数: ' + count;
+
+                // 暂停待机音乐，播放倒计时音乐
+                bgm.pause();
+                countdownMusic.currentTime = 0;
+                countdownMusic.play().catch(err => console.log('播放倒计时音乐失败:', err));
+
+                // 启动60秒倒计时
+                const endTime = Date.now() + 60000;
+                timerEl.textContent = '倒计时: 60s';
+                timerInterval = setInterval(() => {
+                    const remaining = Math.ceil((endTime - Date.now()) / 1000);
+                    if (remaining <= 0) {
+                        clearInterval(timerInterval);
+                        timerEl.textContent = '倒计时: 0s (冷却中)';
+                        gameState = 'cooldown';
+
+                        // 停止倒计时音乐，恢复待机音乐
+                        countdownMusic.pause();
+                        countdownMusic.currentTime = 0;
+                        bgm.play().catch(err => console.log('恢复背景音乐失败:', err));
+
+                        // 6.7秒后重置回 idle 状态
+                        setTimeout(() => {
+                            gameState = 'idle';
+                            timerEl.textContent = '倒计时: 60s';
+                        }, 6700);
+                    } else {
+                        timerEl.textContent = '倒计时: ' + remaining + 's';
+                    }
+                }, 200);
+            }
+
+            // 游戏进行中：正常计数、音效、动画
+            if (gameState === 'running') {
+                count++;
+                counterEl.textContent = '点击次数: ' + count;
+
+                const sfxInstance = baseAudioEl.cloneNode();
+                sfxInstance.play().catch(err => {
+                    console.log('未找到 sound.ogg，使用备用提示音或请放入音效文件');
+                });
+
+                imgEl.classList.add('shake');
+                imgEl.addEventListener('animationend', () => {
+                    imgEl.classList.remove('shake');
+                }, { once: true });
+            }
+        });
+    </script>
+
+</body>
+</html>

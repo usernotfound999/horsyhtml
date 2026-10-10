@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>保护马跃!</title>
+<link rel="icon" type="image/png" href="/icon.png">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #333; font-family: sans-serif; }
+  
+  #game-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* 顶部计数器 */
+  #score-board {
+    position: absolute;
+    top: 15px;
+    width: 100%;
+    text-align: center;
+    color: #fff;
+    font-size: 28px;
+    z-index: 100;
+    user-select: none;
+  }
+
+  /* 开始游戏按钮 */
+  #start-btn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 15px 40px;
+    font-size: 22px;
+    cursor: pointer;
+    z-index: 101;
+    border: none;
+    border-radius: 8px;
+    background: #4CAF50;
+    color: white;
+  }
+  #start-btn:hover { background: #45a049; }
+
+  /* 中间的图片 */
+  #center-img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60px;
+    height: 60px;
+    display: none;
+    z-index: 50;
+  }
+
+  /* 敌人图片 */
+  .enemy {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    z-index: 60;
+    user-select: none;
+  }
+
+  /* 屏幕抖动动画 */
+  @keyframes shake {
+    0% { transform: translate(2px, 1px) rotate(0deg); }
+    10% { transform: translate(-1px, -2px) rotate(-1deg); }
+    20% { transform: translate(-3px, 0px) rotate(1deg); }
+    30% { transform: translate(3px, 2px) rotate(0deg); }
+    40% { transform: translate(1px, -1px) rotate(1deg); }
+    50% { transform: translate(-1px, 2px) rotate(-1deg); }
+    60% { transform: translate(-3px, 1px) rotate(0deg); }
+    70% { transform: translate(3px, 1px) rotate(-1deg); }
+    80% { transform: translate(-1px, -1px) rotate(1deg); }
+    90% { transform: translate(1px, 2px) rotate(0deg); }
+    100% { transform: translate(1px, -2px) rotate(-1deg); }
+  }
+  .shake {
+    animation: shake 0.4s infinite;
+  }
+</style>
+</head>
+<body>
+
+<div id="game-container">
+  <div id="score-board">杀敌次数: <span id="score">0</span></div>
+  <button id="start-btn">开始游戏</button>
+  <img id="center-img" src="center.png" alt="Horsy">
+  
+  <!-- 背景音乐、碰撞音效 以及 击杀音效 -->
+  <audio id="bgm" src="bgm.mp3" loop preload="auto"></audio>
+  <audio id="hit-sound" src="hit.ogg" preload="auto"></audio>
+  <audio id="kill-sound" src="kill.ogg" preload="auto"></audio>
+</div>
+
+<script>
+const startBtn = document.getElementById('start-btn');
+const centerImg = document.getElementById('center-img');
+const scoreEl = document.getElementById('score');
+const container = document.getElementById('game-container');
+const hitSound = document.getElementById('hit-sound');
+const killSound = document.getElementById('kill-sound'); // 获取击杀音效元素
+const bgm = document.getElementById('bgm');
+
+let score = 0;
+let gameRunning = false;
+let enemies = [];
+let animFrame;
+let difficultyTimer;
+let spawnTimer;
+
+// 难度参数
+let baseSpeed = 1;       
+let spawnInterval = 1200;
+let spawnCount = 1;      
+
+// ===== 开始游戏 =====
+startBtn.addEventListener('click', () => {
+  // 重置状态
+  score = 0;
+  updateScore();
+  baseSpeed = 1;
+  spawnInterval = 1200;
+  spawnCount = 1;
+  gameRunning = true;
+
+  // UI变化
+  startBtn.style.display = 'none';
+  centerImg.style.display = 'block';
+  container.classList.remove('shake');
+
+  // 清除旧的敌人
+  enemies.forEach(e => e.el.remove());
+  enemies = [];
+
+  // 播放背景音乐
+  bgm.currentTime = 0;
+  bgm.play().catch(err => console.log('背景音乐播放失败:', err));
+
+  // 启动游戏主循环
+  loop();
+
+  // 每秒增加难度
+  clearInterval(difficultyTimer);
+  difficultyTimer = setInterval(() => {
+    if (!gameRunning) return;
+    baseSpeed += 0.3;              
+    spawnCount += 1;               
+    spawnInterval = Math.max(300, spawnInterval - 150); 
+    resetSpawner();
+  }, 1000);
+
+  // 开始生成敌人
+  resetSpawner();
+});
+
+// ===== 生成敌人逻辑 =====
+function resetSpawner() {
+  clearTimeout(spawnTimer);
+  function spawn() {
+    if (!gameRunning) return;
+    for (let i = 0; i < spawnCount; i++) {
+      createEnemy();
+    }
+    spawnTimer = setTimeout(spawn, spawnInterval);
+  }
+  spawn();
+}
+
+function createEnemy() {
+  const el = document.createElement('img');
+  el.src = 'enemy.png';   
+  el.className = 'enemy';
+
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+
+  const edge = Math.floor(Math.random() * 4);
+  let x, y;
+  if (edge === 0)      { x = Math.random() * w; y = -50; } 
+  else if (edge === 1) { x = w + 10; y = Math.random() * h; } 
+  else if (edge === 2) { x = Math.random() * w; y = h + 10; } 
+  else                 { x = -50; y = Math.random() * h; } 
+
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+  container.appendChild(el);
+
+  const centerX = w / 2;
+  const centerY = h / 2;
+  const dx = centerX - (x + 20);
+  const dy = centerY - (y + 20);
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const vx = (dx / dist) * baseSpeed;
+  const vy = (dy / dist) * baseSpeed;
+
+  const enemyObj = { el, x, y, vx, vy };
+  enemies.push(enemyObj);
+
+  el.addEventListener('click', (e) => {
+    if (!gameRunning) return;
+    score++;
+    updateScore();
+    
+    // 播放击杀音效
+    killSound.currentTime = 0;
+    killSound.play().catch(err => console.log('击杀音效播放失败:', err));
+
+    el.remove();
+    enemies = enemies.filter(en => en !== enemyObj);
+    e.stopPropagation();
+  });
+}
+
+// ===== 游戏主循环 =====
+function loop() {
+  if (!gameRunning) return;
+
+  const centerRect = centerImg.getBoundingClientRect();
+  const cx = centerRect.left + centerRect.width / 2;
+  const cy = centerRect.top + centerRect.height / 2;
+  const cr = centerRect.width / 2; 
+
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const en = enemies[i];
+    en.x += en.vx;
+    en.y += en.vy;
+    en.el.style.left = en.x + 'px';
+    en.el.style.top = en.y + 'px';
+
+    const ex = en.x + 20; 
+    const ey = en.y + 20; 
+    const dist = Math.sqrt((ex - cx) ** 2 + (ey - cy) ** 2);
+
+    if (dist < cr + 20) { 
+      gameOver();
+      return;
+    }
+  }
+
+  animFrame = requestAnimationFrame(loop);
+}
+
+// ===== 游戏结束 =====
+function gameOver() {
+  gameRunning = false;
+  cancelAnimationFrame(animFrame);
+  clearInterval(difficultyTimer);
+  clearTimeout(spawnTimer);
+
+  // 停止背景音乐
+  bgm.pause();
+  bgm.currentTime = 0;
+
+  // 播放ogg碰撞音效
+  hitSound.currentTime = 0;
+  hitSound.play().catch(err => console.log('音效播放失败:', err));
+
+  // 屏幕抖动
+  container.classList.add('shake');
+
+  // 隐藏中心图片，清除所有敌人
+  centerImg.style.display = 'none';
+  enemies.forEach(e => e.el.remove());
+  enemies = [];
+
+  setTimeout(() => {
+    startBtn.style.display = 'block';
+    startBtn.textContent = '重新开始';
+    container.classList.remove('shake');
+  }, 600);
+}
+
+function updateScore() {
+  scoreEl.textContent = score;
+}
+</script>
+</body>
+</html>
